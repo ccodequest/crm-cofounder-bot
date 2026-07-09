@@ -10,6 +10,7 @@ export interface TeamMember {
   team_id: string;
   telegram_id: number;
   username: string | null;
+  nickname: string | null;
   role: string;
   skills: string[];
   workload_capacity: number;

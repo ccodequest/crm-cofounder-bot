@@ -28,6 +28,7 @@ model TeamMember {
   team_id           String   @db.Uuid
   telegram_id       BigInt   @unique
   username          String?
+  nickname          String?
   role              String   @default("member")
   skills            String[]
   workload_capacity Int      @default(5)

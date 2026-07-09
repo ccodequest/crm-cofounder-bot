@@ -69,7 +69,7 @@ export function registerCasualChat(bot: Telegraf<TelegrafContext>) {
 
       const allMembers = await prisma.teamMember.findMany({
         where: { team_id: teamId },
-        select: { id: true, username: true, telegram_id: true, role: true, skills: true },
+        select: { id: true, username: true, nickname: true, telegram_id: true, role: true, skills: true },
       });
       const allTasks = await prisma.task.findMany({
         where: { team_id: teamId },
@@ -86,7 +86,7 @@ export function registerCasualChat(bot: Telegraf<TelegrafContext>) {
         include: { stages: { orderBy: { stage_order: 'asc' } } },
       });
 
-      const membersList = allMembers.map((m: any) => `@${m.username} (${m.role})`).join(', ');
+      const membersList = allMembers.map((m: any) => `@${m.username}${m.nickname ? ' (aka ' + m.nickname + ')' : ''} (${m.role})`).join(', ');
       const tasksList = allTasks.map((t: any) => `"${t.title}" [${t.status}] → @${t.assignee?.username || 'none'}`).join('; ');
       const leadsList = allLeads.map((l: any) => `${l.company_name || 'unnamed'} → @${l.assignee?.username || 'none'}`).join('; ');
 
@@ -115,7 +115,7 @@ User: ${userName} (${isOwner ? 'owner' : member?.role || 'member'})
 
 IMPORTANT RULES:
 - Only use existing @usernames from the members list above.
-- For create_task, assignee_username MUST match one of: ${allMembers.map((m: any) => m.username).join(', ')}
+- For create_task, assignee_username MUST match one of these usernames or nicknames: ${allMembers.map((m: any) => m.username + (m.nickname ? ' (' + m.nickname + ')' : '')).join(', ')}
 - If the mentioned username doesn't exist in the members list, use casual_chat and say the user needs to be added via /sync first.
 - The owner can create tasks and leads. Members can only report done and ask status.
 - Output ONLY valid JSON. No markdown. No backticks. Just the JSON object.`,
@@ -135,8 +135,11 @@ IMPORTANT RULES:
         switch (action.action) {
           case 'create_task': {
             if (!isOwner) return '❌ Only the owner can assign tasks.';
-            const assignee = allMembers.find((m: any) => m.username === (action.params.assignee_username || '').toLowerCase());
-            if (!assignee) return `❌ Member @${action.params.assignee_username} not found. Current members: ${allMembers.map((m: any) => '@' + m.username).join(', ')}`;
+            const assignee = allMembers.find((m: any) =>
+              m.username === (action.params.assignee_username || '').toLowerCase() ||
+              m.nickname === (action.params.assignee_username || '').toLowerCase()
+            );
+            if (!assignee) return `❌ Member "${action.params.assignee_username}" not found. Members: ${allMembers.map((m: any) => '@' + m.username + (m.nickname ? ' (' + m.nickname + ')' : '')).join(', ')}`;
             const { createTask } = await import('../../services/task-service.js');
             const task = await createTask({
               teamId, title: action.params.title, dueDate: action.params.due_date,
@@ -175,7 +178,10 @@ IMPORTANT RULES:
             if (!isOwner) return '❌ Only the owner can assign leads.';
             const foundLead = allLeads.find((l: any) => l.company_name?.toLowerCase().includes((action.params.company_name || '').toLowerCase()));
             if (!foundLead) return `❌ No lead matching "${action.params.company_name}"`;
-            const assignee = allMembers.find((m: any) => m.username === (action.params.assignee_username || '').toLowerCase());
+            const assignee = allMembers.find((m: any) =>
+              m.username === (action.params.assignee_username || '').toLowerCase() ||
+              m.nickname === (action.params.assignee_username || '').toLowerCase()
+            );
             if (!assignee) return '❌ Member not found.';
             const { assignLead, logLeadActivity } = await import('../../services/lead-service.js');
             await assignLead(foundLead.id, assignee.id);
