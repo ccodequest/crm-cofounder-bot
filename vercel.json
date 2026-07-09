@@ -20,6 +20,10 @@
     {
       "src": "api/test/prisma.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/test/getbot.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -42,6 +46,10 @@
     {
       "src": "/api/test/prisma",
       "dest": "api/test/prisma.ts"
+    },
+    {
+      "src": "/api/test/getbot",
+      "dest": "api/test/getbot.ts"
     }
   ],
   "crons": [
