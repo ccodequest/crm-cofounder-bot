@@ -1,6 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { getBot } from '../../src/bot/index.js';
 
+let coldStart = true;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -15,9 +17,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const bot = getBot();
     await bot.handleUpdate(req.body);
-    res.status(200).json({ ok: true });
-  } catch (err) {
-    console.error('Webhook error:', err);
-    res.status(200).json({ ok: true });
+    res.status(200).json({ ok: true, cold: coldStart });
+  } catch (err: any) {
+    console.error('Webhook error:', err?.message, err?.stack);
+    res.status(200).json({ ok: true, error: err?.message });
+  } finally {
+    coldStart = false;
   }
 }
