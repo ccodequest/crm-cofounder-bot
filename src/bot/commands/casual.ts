@@ -26,6 +26,8 @@ export function registerCasualChat(bot: Telegraf<TelegrafContext>) {
         await ctx.reply(`✅ Lead auto-assigned to @${selected.username}`);
         if (ctx.session) delete ctx.session.pendingAutoAssign;
         return;
+      } else {
+        if (ctx.session) delete ctx.session.pendingAutoAssign;
       }
     }
 
@@ -33,30 +35,17 @@ export function registerCasualChat(bot: Telegraf<TelegrafContext>) {
 
     try {
       await ctx.replyWithChatAction('typing');
-      const response = await chatWithTimeout(text, name);
+      const { chatCompletion } = await import('../../services/ai.js');
+      const response = await chatCompletion([
+        {
+          role: 'system',
+          content: `You are the AI Co-Founder of a team. Direct, no sugarcoating. Speaking to ${name}. Be concise. Max 3 sentences. No fluff.`,
+        },
+        { role: 'user', content: text },
+      ]);
       await ctx.reply(response);
     } catch (err: any) {
       await ctx.reply(`⚠️ ${err.message}`);
     }
   });
-}
-
-async function chatWithTimeout(text: string, name: string): Promise<string> {
-  const { chatCompletion } = await import('../../services/ai.js');
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-
-  try {
-    const response = await chatCompletion([
-      {
-        role: 'system',
-        content: `You are the AI Co-Founder of a team. Direct, no sugarcoating. You are speaking to ${name}. Be concise. Max 3-4 sentences. No fluff.`,
-      },
-      { role: 'user', content: text },
-    ], { signal: controller.signal } as any);
-
-    return response;
-  } finally {
-    clearTimeout(timeout);
-  }
 }

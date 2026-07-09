@@ -18,24 +18,41 @@ interface ChatMessage {
   content: string;
 }
 
+const FETCH_TIMEOUT = 9000;
+
+async function fetchWithTimeout(url: string, options: RequestInit, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 export async function chatCompletion(
   messages: ChatMessage[],
   options?: { maxTokens?: number; temperature?: number }
 ): Promise<string> {
   const config = getConfig();
-  const response = await fetch('https://api.nvidia.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
+  const response = await fetchWithTimeout(
+    'https://api.nvidia.com/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages,
+        max_tokens: options?.maxTokens ?? 1024,
+        temperature: options?.temperature ?? 0.8,
+      }),
     },
-    body: JSON.stringify({
-      model: config.model,
-      messages,
-      max_tokens: options?.maxTokens ?? 1024,
-      temperature: options?.temperature ?? 0.8,
-    }),
-  });
+    FETCH_TIMEOUT
+  );
 
   if (!response.ok) {
     const err = await response.text();
