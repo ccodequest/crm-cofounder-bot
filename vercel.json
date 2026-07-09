@@ -24,6 +24,10 @@
     {
       "src": "api/test/getbot.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/test/db_write.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -50,6 +54,10 @@
     {
       "src": "/api/test/getbot",
       "dest": "api/test/getbot.ts"
+    },
+    {
+      "src": "/api/test/db_write",
+      "dest": "api/test/db_write.ts"
     }
   ],
   "crons": [
