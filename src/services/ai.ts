@@ -37,7 +37,7 @@ export async function chatCompletion(
 ): Promise<string> {
   const config = getConfig();
   const response = await fetchWithTimeout(
-    'https://api.nvidia.com/v1/chat/completions',
+    'https://integrate.api.nvidia.com/v1/chat/completions',
     {
       method: 'POST',
       headers: {
