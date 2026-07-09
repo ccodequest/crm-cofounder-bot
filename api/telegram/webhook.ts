@@ -7,12 +7,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const secret = req.headers['x-telegram-bot-api-secret-token'];
-  const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  if (expectedSecret && secret !== expectedSecret) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
   const chatId = req.body?.message?.chat?.id || req.body?.callback_query?.message?.chat?.id;
   if (chatId) {
     const { allowed, retryAfter } = checkRateLimit(chatId);
