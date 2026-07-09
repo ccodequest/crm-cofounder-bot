@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Team {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  owner_id     BigInt
+  created_at   DateTime @default(now()) @db.Timestamptz
+
+  team_members      TeamMember[]
+  tasks             Task[]
+  leads             Lead[]
+  pipelines         Pipeline[]
+  followups         Followup[]
+  persona_profiles  PersonaProfile[]
+}
+
+model TeamMember {
+  id                String   @id @default(uuid()) @db.Uuid
+  team_id           String   @db.Uuid
+  telegram_id       BigInt   @unique
+  username          String?
+  role              String   @default("member")
+  skills            String[]
+  workload_capacity Int      @default(5)
+  created_at        DateTime @default(now()) @db.Timestamptz
+
+  team             Team             @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  assigned_tasks   Task[]           @relation("TaskAssignee")
+  created_tasks    Task[]           @relation("TaskCreator")
+  task_reports     TaskReport[]
+  assigned_leads   Lead[]
+  followups        Followup[]
+
+  @@unique([team_id, telegram_id])
+  @@map("team_members")
+}
+
+model Task {
+  id          String   @id @default(uuid()) @db.Uuid
+  team_id     String   @db.Uuid
+  title       String
+  description String?
+  status      String   @default("pending")
+  priority    String   @default("medium")
+  due_date    DateTime? @db.Timestamptz
+  assignee_id String?  @db.Uuid
+  creator_id  String?  @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamptz
+  updated_at  DateTime @default(now()) @db.Timestamptz
+
+  team     Team        @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  assignee TeamMember? @relation("TaskAssignee", fields: [assignee_id], references: [id])
+  creator  TeamMember? @relation("TaskCreator", fields: [creator_id], references: [id])
+  reports  TaskReport[]
+
+  @@index([assignee_id])
+  @@index([status])
+  @@map("tasks")
+}
+
+model TaskReport {
+  id                String   @id @default(uuid()) @db.Uuid
+  task_id           String   @db.Uuid
+  reporter_id       String?  @db.Uuid
+  content           String
+  metrics           Json     @default("{}")
+  status            String   @default("pending_review")
+  reviewer_notes    String?
+  cofounder_analysis Json   @default("{}")
+  created_at        DateTime @default(now()) @db.Timestamptz
+
+  task     Task        @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  reporter TeamMember? @relation(fields: [reporter_id], references: [id])
+
+  @@map("task_reports")
+}
+
+model Lead {
+  id               String   @id @default(uuid()) @db.Uuid
+  team_id          String   @db.Uuid
+  company_name     String?
+  domain           String?
+  contact_name     String?
+  contact_role     String?
+  email            String?
+  phone            String?
+  source           String   @default("manual")
+  notes            String?
+  score            Int      @default(0)
+  enrichment_data  Json     @default("{}")
+  cofounder_take   String?
+  assigned_to      String?  @db.Uuid
+  pipeline_id      String?  @db.Uuid
+  stage_id         String?  @db.Uuid
+  created_at       DateTime @default(now()) @db.Timestamptz
+  updated_at       DateTime @default(now()) @db.Timestamptz
+
+  team             Team             @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  assignee         TeamMember?      @relation(fields: [assigned_to], references: [id])
+  enrichments      LeadEnrichment[]
+  activities       LeadActivity[]
+
+  @@index([assigned_to])
+  @@index([pipeline_id])
+  @@map("leads")
+}
+
+model LeadEnrichment {
+  id             String   @id @default(uuid()) @db.Uuid
+  lead_id        String   @db.Uuid
+  tech_stack     Json     @default("[]")
+  linkedin_data  Json     @default("{}")
+  news           Json     @default("[]")
+  competitors    Json     @default("[]")
+  decision_makers Json    @default("[]")
+  raw_research   String?
+  researched_at  DateTime @default(now()) @db.Timestamptz
+
+  lead Lead @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+
+  @@map("lead_enrichment")
+}
+
+model Pipeline {
+  id         String   @id @default(uuid()) @db.Uuid
+  team_id    String   @db.Uuid
+  name       String
+  is_default Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  team   Team             @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  stages PipelineStage[]
+
+  @@map("pipelines")
+}
+
+model PipelineStage {
+  id          String   @id @default(uuid()) @db.Uuid
+  pipeline_id String   @db.Uuid
+  name        String
+  stage_order Int
+  color       String   @default("#808080")
+  sla_days    Int?
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  pipeline Pipeline @relation(fields: [pipeline_id], references: [id], onDelete: Cascade)
+
+  @@map("pipeline_stages")
+}
+
+model LeadActivity {
+  id         String   @id @default(uuid()) @db.Uuid
+  lead_id    String   @db.Uuid
+  type       String
+  content    String?
+  user_id    BigInt?
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  lead Lead @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+
+  @@map("lead_activities")
+}
+
+model Followup {
+  id           String   @id @default(uuid()) @db.Uuid
+  team_id      String   @db.Uuid
+  related_type String
+  related_id   String   @db.Uuid
+  assignee_id  String?  @db.Uuid
+  due_date     DateTime @db.Timestamptz
+  status       String   @default("pending")
+  cadence      String?
+  notes        String?
+  created_at   DateTime @default(now()) @db.Timestamptz
+
+  team     Team        @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  assignee TeamMember? @relation(fields: [assignee_id], references: [id])
+
+  @@index([due_date], map: "idx_followups_due")
+  @@map("followups")
+}
+
+model PersonaProfile {
+  id                    String   @id @default(uuid()) @db.Uuid
+  team_id               String   @db.Uuid
+  telegram_id           BigInt
+  tone                  String   @default("strict")
+  custom_prompt_override String?
+  set_by                BigInt?
+  created_at            DateTime @default(now()) @db.Timestamptz
+  updated_at            DateTime @default(now()) @db.Timestamptz
+
+  team Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  @@unique([team_id, telegram_id])
+  @@map("persona_profiles")
+}
+
+model SchemaVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  table_name  String
+  schema_json Json
+  version     Int      @default(1)
+  created_by  BigInt?
+  created_at  DateTime @default(now()) @db.Timestamptz
+  is_active   Boolean  @default(true)
+
+  @@map("schema_versions")
+}

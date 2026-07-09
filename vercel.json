@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/telegram/webhook.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/cron/followups.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/telegram/webhook",
+      "dest": "api/telegram/webhook.ts"
+    },
+    {
+      "src": "/api/cron/followups",
+      "dest": "api/cron/followups.ts"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/followups",
+      "schedule": "0 8,14 * * *"
+    }
+  ]
+}
