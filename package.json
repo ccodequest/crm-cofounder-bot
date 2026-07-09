@@ -10,6 +10,7 @@
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "db:push": "npx prisma db push",
+    "postinstall": "npx prisma generate",
     "db:generate": "npx prisma generate",
     "db:studio": "npx prisma studio"
   },

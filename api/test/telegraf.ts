@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: {
         message_id: 999,
         from: { id: Number(ownerId), is_bot: false, first_name: 'Test' },
-        chat: { id: Number(ownerId), type: 'private' as const },
+        chat: { id: Number(ownerId), type: 'private' as const, first_name: 'Test' },
         date: Math.floor(Date.now() / 1000),
         text: '/start',
       },
