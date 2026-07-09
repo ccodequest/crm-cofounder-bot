@@ -16,6 +16,10 @@
     {
       "src": "api/test/telegraf.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/test/prisma.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -34,6 +38,10 @@
     {
       "src": "/api/test/telegraf",
       "dest": "api/test/telegraf.ts"
+    },
+    {
+      "src": "/api/test/prisma",
+      "dest": "api/test/prisma.ts"
     }
   ],
   "crons": [
