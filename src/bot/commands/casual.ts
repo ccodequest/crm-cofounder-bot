@@ -145,11 +145,16 @@ IMPORTANT RULES:
               teamId, title: action.params.title, dueDate: action.params.due_date,
               assigneeId: assignee.id, creatorId: member!.id,
             });
+            const tid = Number(assignee.telegram_id);
+            let dmStatus = '';
             try {
-              await ctx.telegram.sendMessage(Number(assignee.telegram_id),
+              await ctx.telegram.sendMessage(tid,
                 `📋 *New Task*\n\n"${task.title}"${action.params.due_date ? '\nDue: ' + action.params.due_date : ''}\n\nUse /done when finished.`);
-            } catch {}
-            return `✅ Task "${task.title}" assigned to @${assignee.username}${action.params.due_date ? ' (due ' + action.params.due_date + ')' : ''}`;
+              dmStatus = ' ✅ DM sent';
+            } catch (e: any) {
+              dmStatus = ` ⚠️ DM failed (${e.message || 'user may need to start bot'})`;
+            }
+            return `✅ Task "${task.title}" assigned to @${assignee.username}${action.params.due_date ? ' (due ' + action.params.due_date + ')' : ''}${dmStatus}`;
           }
 
           case 'report_done': {
@@ -162,7 +167,9 @@ IMPORTANT RULES:
             try {
               await ctx.telegram.sendMessage(ownerId,
                 `📝 *Report from @${member.username}*\n\nTask: ${task.title}\n${action.params.content}\n\nUse /review to see all pending.`);
-            } catch {}
+            } catch (e: any) {
+              console.error('owner DM failed:', e.message);
+            }
             return '✅ Report submitted for owner review.';
           }
 
