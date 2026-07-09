@@ -36,9 +36,9 @@ export function registerTeamCommands(bot: Telegraf<TelegrafContext>) {
         return ctx.reply('No team members yet.');
       }
       const lines = members.map(
-        m => `• @${m.username} — ${m.role} (Skills: ${m.skills.join(', ') || 'none'})`
+        m => `• @${m.username} — ${m.role} (Skills: ${m.skills.join(', ') || 'none'})${m.telegram_id > 0 ? ' ✅' : ' ⏳'}`
       );
-      await ctx.reply(`*Team Members:*\n${lines.join('\n')}`, { parse_mode: 'Markdown' });
+      await ctx.reply(`*Team Members:*\n${lines.join('\n')}\n\n✅ = registered · ⏳ = only @mention, hasn't messaged bot yet`, { parse_mode: 'Markdown' });
     } else if (subcommand === 'role') {
       const mention = args[1];
       const newRole = args[2];
@@ -66,33 +66,62 @@ export function registerTeamCommands(bot: Telegraf<TelegrafContext>) {
     }
   });
 
-  bot.command('sync_group', ownerOnly(), async (ctx) => {
-    if (!ctx.chat || ctx.chat.type === 'private') {
-      return ctx.reply('❌ Run this in a group where the bot is a member.');
+  bot.command('sync', ownerOnly(), async (ctx) => {
+    const entities = ctx.message.entities || [];
+    const mentions = entities.filter(e => e.type === 'mention');
+
+    if (mentions.length === 0) {
+      return ctx.reply('Usage: /sync @user1 @user2 @user3\nTag the people you want to add as team members.');
     }
 
-    await ctx.reply('🔄 Fetching group members...');
-
-    try {
-      const admins = await ctx.getChatAdministrators();
-      const chatMembers = admins.filter(m => !m.user.is_bot);
-
-      let added = 0;
-      for (const m of chatMembers) {
-        const username = m.user.username || `${m.user.first_name}_${m.user.id}`;
-        try {
-          await addMember(ctx.team!.id, m.user.id, username.toLowerCase(), 'member', []);
-          added++;
-        } catch (e: any) {
-          if (!e.message?.includes('Unique constraint')) {
-            console.error('sync add error:', e.message);
-          }
+    let added = 0;
+    for (const entity of mentions) {
+      const username = ctx.message.text.slice(entity.offset + 1, entity.offset + entity.length).toLowerCase();
+      try {
+        await addMember(ctx.team!.id, 0, username, 'member', []);
+        added++;
+      } catch (e: any) {
+        if (!e.message?.includes('Unique constraint')) {
+          console.error('sync add error:', e.message);
         }
       }
+    }
 
-      await ctx.reply(`✅ Synced ${added} members from group.\nUse /team list to see them.`);
+    await ctx.reply(`✅ Synced ${added} member(s) from mentions. They\'ll be fully registered when they first message the bot.\nUse /team list to see them.`);
+  });
+
+  bot.command('subscribe', async (ctx) => {
+    const userId = ctx.from?.id;
+    const username = ctx.from?.username?.toLowerCase();
+    const firstName = ctx.from?.first_name;
+
+    if (!userId) return ctx.reply('❌ Could not identify you.');
+
+    const prisma = getDb();
+    let team = await prisma.team.findFirst({ where: { owner_id: BigInt(Number(process.env.OWNER_TELEGRAM_ID)) } });
+
+    if (!team) {
+      team = await prisma.team.create({
+        data: { name: 'Default Team', owner_id: BigInt(Number(process.env.OWNER_TELEGRAM_ID)) },
+      });
+    }
+
+    const displayName = username || `${firstName}_${userId}`;
+
+    try {
+      const existing = await prisma.teamMember.findFirst({
+        where: { team_id: team.id, telegram_id: BigInt(userId) },
+      });
+
+      if (existing) {
+        await ctx.reply(`✅ You\'re already registered as @${existing.username || displayName}!`);
+        return;
+      }
+
+      await addMember(team.id, userId, displayName, 'member', []);
+      await ctx.reply(`✅ Subscribed! You\'re now a team member (@${displayName}).\nUse /done "what you completed" when you finish tasks.`);
     } catch (err: any) {
-      await ctx.reply(`❌ Sync failed: ${err.message}`);
+      await ctx.reply(`❌ ${err.message}`);
     }
   });
 }

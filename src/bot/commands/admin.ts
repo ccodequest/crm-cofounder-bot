@@ -5,15 +5,10 @@ export function registerAdminCommands(bot: Telegraf<TelegrafContext>) {
   bot.start(async (ctx) => {
     await ctx.reply(
       '🤖 *CRM Co-Founder Bot*\n\n'
-      + 'I manage your team, tasks, and leads with an AI co-founder that keeps everyone accountable.\n\n'
-      + 'Commands:\n'
-      + '• /team add/list/role — Manage team\n'
-      + '• /assign @user task due:date — Assign work\n'
-      + '• /done details — Report completion\n'
-      + '• /review — Co-founder reviews reports\n'
-      + '• /lead company info — Create lead\n'
-      + '• /research domain — Deep lead research\n'
-      + '• /persona @user tone — Set bot tone\n'
+      + 'I manage your team, tasks, and leads with an AI co-founder.\n\n'
+      + '📌 *Quick Start:*\n'
+      + '• Type /subscribe to register as a team member\n'
+      + '• Owner: /sync @user1 @user2 to add people by mention\n'
       + '• /help — Full command list',
       { parse_mode: 'Markdown' }
     );
@@ -22,27 +17,40 @@ export function registerAdminCommands(bot: Telegraf<TelegrafContext>) {
   bot.help(async (ctx) => {
     const isOwner = ctx.isOwner;
     const commands = [
-      '/assign @user "task" due:date — Assign work',
+      '━━ *Getting Started* ━━',
+      '✅ /subscribe — Register yourself as a team member',
+      '📋 /sync @user1 @user2 — (Owner) Add people by @mention',
+      '━━ *Tasks* ━━',
+      '/assign "Name" "task" due:date — Assign work (use name or @)',
       '/done "details" — Report completion',
-      '/status @user — View workload',
-      '/overdue — List overdue items',
+      '/status @Name — View workload',
+      '/overdue — List overdue tasks',
+      '━━ *Leads & CRM* ━━',
       '/lead "company, contact, info" — Create lead',
-      '/research "domain" — Deep AI research',
-      '/capture_lead — (reply) Capture lead from message',
-      '/pipeline create name stages:"..." — Create pipeline',
-      '/stage "lead" "stage" — Move lead',
+      '/research "domain" — Deep AI research on a company',
+      '/capture_lead — (reply) Capture lead from a message',
+      '/assign_lead "Name" "company" — Assign lead by name',
+      '/assign_lead_auto "company" — AI recommends who gets the lead',
+      '/stage "lead" "stage" — Move lead through pipeline',
       '/followup "lead" cadence:"weekly" — Schedule followup',
-      '/team add @user role skills',
-      '/team list',
-      '/persona @user brutal|strict|neutral|gentle',
+      '━━ *Team* ━━',
+      '/team add @user role skills — Add member manually',
+      '/team list — View all members',
+      '/team role @user role — Change role',
+      '/persona "Name" brutal|strict|neutral|gentle — Set AI tone',
       ...(isOwner ? [
-        '/review — Co-founder reviews pending reports',
-        '/approve — Approve report',
+        '━━ *Owner Review* ━━',
+        '/review — AI co-founder reviews pending reports',
+        '/approve — Approve last reviewed report',
         '/revise "feedback" — Request revision',
         '/call_founder — Escalate to founder',
-        '/schema create "table" fields:"..."',
+        '/schema create "table" fields:"..." — Custom tables',
+        '━━ *Pipelines* ━━',
+        '/pipeline create "Sales" stages:"New,Contacted,Qualified"',
+        '/pipeline_list — View pipelines',
+        '/stage "lead" "stage" — Move lead in pipeline',
       ] : []),
     ];
-    await ctx.reply(`*Commands:*\n${commands.map(c => `• ${c}`).join('\n')}`, { parse_mode: 'Markdown' });
+    await ctx.reply(`*CRM Co-Founder Bot — Full Commands:*\n\n${commands.join('\n')}`, { parse_mode: 'Markdown' });
   });
 }
