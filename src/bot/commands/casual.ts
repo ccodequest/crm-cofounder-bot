@@ -7,6 +7,8 @@ export function registerCasualChat(bot: Telegraf<TelegrafContext>) {
 
     const text = ctx.message.text;
 
+    if (text.startsWith('/')) return next();
+
     const pending = ctx.session?.pendingAutoAssign;
     if (pending) {
       const choice = parseInt(text);
