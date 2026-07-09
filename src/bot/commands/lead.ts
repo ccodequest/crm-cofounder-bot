@@ -187,25 +187,4 @@ export function registerLeadCommands(bot: Telegraf<TelegrafContext>) {
     }
   });
 
-  bot.on('text', async (ctx) => {
-    const pending = ctx.session?.pendingAutoAssign;
-    if (!pending) return;
-
-    const choice = parseInt(ctx.message.text);
-    if (isNaN(choice) || choice < 1 || choice > pending.members.length) return;
-
-    const selected = pending.members[choice - 1];
-    await assignLead(pending.leadId, selected.id);
-    await logLeadActivity(pending.leadId, 'assigned', `Auto-assigned to @${selected.username}`, ctx.from!.id);
-
-    try {
-      await ctx.telegram.sendMessage(
-        Number(selected.telegram_id),
-        `📋 *Lead Auto-Assigned to You*\n\nCheck and follow up.`
-      );
-    } catch {}
-
-    await ctx.reply(`✅ Lead auto-assigned to @${selected.username}`);
-    if (ctx.session) delete ctx.session.pendingAutoAssign;
-  });
-}
+  }

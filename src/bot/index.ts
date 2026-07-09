@@ -9,6 +9,7 @@ import { registerPersonaCommands } from './commands/persona.js';
 import { registerLeadCommands } from './commands/lead.js';
 import { registerPipelineCommands } from './commands/pipeline.js';
 import { registerSchemaCommands } from './commands/schema.js';
+import { registerCasualChat } from './commands/casual.js';
 
 declare module 'telegraf' {
   interface Context {
@@ -46,6 +47,7 @@ export function getBot(): Telegraf<TelegrafContext> {
     registerLeadCommands(bot);
     registerPipelineCommands(bot);
     registerSchemaCommands(bot);
+    registerCasualChat(bot);
   }
   return bot;
 }
