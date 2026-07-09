@@ -24,23 +24,28 @@ export function registerPersonaCommands(bot: Telegraf<TelegrafContext>) {
       return;
     }
 
-    const mention = args[0];
+    const identifier = args[0]?.replace('@', '');
     const tone = args[1]?.toLowerCase() as Tone;
 
-    if (!mention || !tone || !VALID_TONES.includes(tone)) {
-      return ctx.reply(`Usage: /persona @username ${VALID_TONES.join('|')}\n/persona list`);
+    if (!identifier || !tone || !VALID_TONES.includes(tone)) {
+      return ctx.reply(`Usage: /persona "Name" ${VALID_TONES.join('|')}\n/persona list`);
     }
 
     const prisma = getDb();
     const member = await prisma.teamMember.findFirst({
-      where: { username: mention.replace('@', '') },
+      where: {
+        OR: [
+          { username: identifier.toLowerCase() },
+          { username: { contains: identifier, mode: 'insensitive' } },
+        ],
+      },
     });
 
-    if (!member) return ctx.reply(`❌ Member @${mention.replace('@', '')} not found`);
+    if (!member) return ctx.reply(`❌ No member found matching "${identifier}". Use /team list to see all members.`);
 
     try {
       await setPersonaTone(ctx.team!.id, Number(member.telegram_id), tone, ctx.from!.id);
-      await ctx.reply(`✅ @${mention.replace('@', '')} tone set to *${tone}*`, { parse_mode: 'Markdown' });
+      await ctx.reply(`✅ @${member.username} tone set to *${tone}*`, { parse_mode: 'Markdown' });
     } catch (err: any) {
       await ctx.reply(`❌ ${err.message}`);
     }

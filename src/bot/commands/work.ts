@@ -7,25 +7,30 @@ import { getDb } from '../../services/db.js';
 export function registerWorkCommands(bot: Telegraf<TelegrafContext>) {
   bot.command('assign', ownerOnly(), async (ctx) => {
     const text = ctx.message.text.slice('/assign '.length).trim();
-    const mentionMatch = text.match(/@(\S+)/);
+    const nameMatch = text.match(/^@?(\S+)/);
     const taskMatch = text.match(/"([^"]+)"/);
     const dueMatch = text.match(/due:(\S+)/);
 
-    if (!mentionMatch || !taskMatch) {
-      return ctx.reply('Usage: /assign @username "Task description" due:2025-01-20');
+    if (!nameMatch || !taskMatch) {
+      return ctx.reply('Usage: /assign "Name" "Task description" due:date\nYou can use @username or just first name.');
     }
 
-    const username = mentionMatch[1];
+    const identifier = nameMatch[1];
     const title = taskMatch[1];
     const dueDate = dueMatch ? dueMatch[1] : null;
 
     try {
       const prisma = getDb();
       const assignee = await prisma.teamMember.findFirst({
-        where: { username },
+        where: {
+          OR: [
+            { username: identifier.toLowerCase() },
+            { username: { contains: identifier, mode: 'insensitive' } },
+          ],
+        },
       });
 
-      if (!assignee) return ctx.reply(`❌ Member @${username} not found`);
+      if (!assignee) return ctx.reply(`❌ No member found matching "${identifier}". Use /team list to see all members.`);
 
       const task = await createTask({
         teamId: ctx.team!.id,
@@ -43,7 +48,7 @@ export function registerWorkCommands(bot: Telegraf<TelegrafContext>) {
         );
       } catch {}
 
-      await ctx.reply(`✅ Task "${title}" assigned to @${username}`);
+      await ctx.reply(`✅ Task "${title}" assigned to @${assignee.username || identifier}`);
     } catch (err: any) {
       await ctx.reply(`❌ ${err.message}`);
     }

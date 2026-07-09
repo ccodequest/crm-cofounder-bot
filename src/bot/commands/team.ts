@@ -25,13 +25,7 @@ export function registerTeamCommands(bot: Telegraf<TelegrafContext>) {
         : username;
 
       try {
-        const member = await addMember(
-          ctx.team!.id,
-          0,
-          mentionedUsername,
-          role,
-          skills
-        );
+        await addMember(ctx.team!.id, 0, mentionedUsername, role, skills);
         await ctx.reply(`✅ Added @${username} as ${role}`);
       } catch (err: any) {
         await ctx.reply(`❌ ${err.message}`);
@@ -69,6 +63,36 @@ export function registerTeamCommands(bot: Telegraf<TelegrafContext>) {
       }
     } else {
       await ctx.reply('Available: /team add, /team list, /team role');
+    }
+  });
+
+  bot.command('sync_group', ownerOnly(), async (ctx) => {
+    if (!ctx.chat || ctx.chat.type === 'private') {
+      return ctx.reply('❌ Run this in a group where the bot is a member.');
+    }
+
+    await ctx.reply('🔄 Fetching group members...');
+
+    try {
+      const admins = await ctx.getChatAdministrators();
+      const chatMembers = admins.filter(m => !m.user.is_bot);
+
+      let added = 0;
+      for (const m of chatMembers) {
+        const username = m.user.username || `${m.user.first_name}_${m.user.id}`;
+        try {
+          await addMember(ctx.team!.id, m.user.id, username.toLowerCase(), 'member', []);
+          added++;
+        } catch (e: any) {
+          if (!e.message?.includes('Unique constraint')) {
+            console.error('sync add error:', e.message);
+          }
+        }
+      }
+
+      await ctx.reply(`✅ Synced ${added} members from group.\nUse /team list to see them.`);
+    } catch (err: any) {
+      await ctx.reply(`❌ Sync failed: ${err.message}`);
     }
   });
 }

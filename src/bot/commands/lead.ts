@@ -88,22 +88,27 @@ export function registerLeadCommands(bot: Telegraf<TelegrafContext>) {
 
   bot.command('assign_lead', ownerOnly(), async (ctx) => {
     const text = ctx.message.text.slice('/assign_lead '.length).trim();
-    const mentionMatch = text.match(/@(\S+)/);
+    const nameMatch = text.match(/^@?(\S+)/);
     const leadMatch = text.match(/"([^"]+)"/);
 
-    if (!mentionMatch || !leadMatch) {
-      return ctx.reply('Usage: /assign_lead @username "lead company name"');
+    if (!nameMatch || !leadMatch) {
+      return ctx.reply('Usage: /assign_lead "Name" "lead company name"');
     }
 
-    const username = mentionMatch[1];
+    const identifier = nameMatch[1];
     const leadQuery = leadMatch[1];
 
     try {
       const prisma = getDb();
       const member = await prisma.teamMember.findFirst({
-        where: { username },
+        where: {
+          OR: [
+            { username: identifier.toLowerCase() },
+            { username: { contains: identifier, mode: 'insensitive' } },
+          ],
+        },
       });
-      if (!member) return ctx.reply(`❌ Member @${username} not found`);
+      if (!member) return ctx.reply(`❌ No member found matching "${identifier}". Use /team list to see all members.`);
 
       const leads = await prisma.lead.findMany({
         where: { company_name: { contains: leadQuery, mode: 'insensitive' } },
@@ -115,7 +120,7 @@ export function registerLeadCommands(bot: Telegraf<TelegrafContext>) {
       }
 
       await assignLead(leads[0].id, member.id);
-      await logLeadActivity(leads[0].id, 'assigned', `Assigned to @${username}`, ctx.from!.id);
+      await logLeadActivity(leads[0].id, 'assigned', `Assigned to @${member.username}`, ctx.from!.id);
 
       try {
         await ctx.telegram.sendMessage(
@@ -124,7 +129,7 @@ export function registerLeadCommands(bot: Telegraf<TelegrafContext>) {
         );
       } catch {}
 
-      await ctx.reply(`✅ Lead "${leads[0].company_name || leadQuery}" assigned to @${username}`);
+      await ctx.reply(`✅ Lead "${leads[0].company_name || leadQuery}" assigned to @${member.username}`);
     } catch (err: any) {
       await ctx.reply(`❌ ${err.message}`);
     }
